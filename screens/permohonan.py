@@ -16,7 +16,6 @@ from reportlab.lib import colors
 # KONFIG GOOGLE SHEET
 # ======================================================
 SHEET_ID = "1A8Mj32ct2wuhfwFBWmiV7CABfhGgXrLnCqX3uDPPhms"
-CREDENTIAL_PATH = "credentials/service_account.json"
 
 # ======================================================
 # KONFIG EMAIL BENDAHARI
@@ -34,9 +33,11 @@ def load_permohonan_data():
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        CREDENTIAL_PATH, scope
+
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"], scope
     )
+
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SHEET_ID).sheet1
 
@@ -51,11 +52,14 @@ def get_sheet():
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        CREDENTIAL_PATH, scope
+
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"], scope
     )
+
     client = gspread.authorize(creds)
     return client.open_by_key(SHEET_ID).sheet1
+
 
 # ======================================================
 # UPDATE STATUS DALAM GOOGLE SHEET
