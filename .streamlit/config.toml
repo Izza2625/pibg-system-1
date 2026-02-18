@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#8B0000"              # merah utama
+backgroundColor = "#FFFFFF"           # 👉 background putih
+secondaryBackgroundColor = "#F5EAEA"  # putih + soft merah
+textColor = "#2B0000"                 # tulisan gelap (tak hilang atas putih)
+font = "sans serif"
