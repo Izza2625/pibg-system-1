@@ -1,8 +1,9 @@
 streamlit
 pandas
-numpy
 matplotlib
+reportlab
+openpyxl
 gspread
-oauth2client
-Pillow
-
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
