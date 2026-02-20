@@ -1,4 +1,9 @@
 import streamlit as st
+
+st.markdown(
+    '<meta name="google-site-verification" content="5MK6-xEppqTDu9sT7ExCI1PM5dC3QCX16A1wV3Vy_g0" />',
+    unsafe_allow_html=True
+)
 import base64
 from datetime import datetime
 import pytz
