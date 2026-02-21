@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 import os
 import io
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
+SHEET_ID = "11O-b8ZvpqK0uYhARIzQ4uINdYfoYkPjyl7JRGQ5TDts"
 # =============== IMPORT UNTUK PDF ===============
 from reportlab.lib.pagesizes import landscape, A4
 from reportlab.platypus import (
@@ -69,10 +72,29 @@ def load_data():
         )
 
 
-def save_data(df: pd.DataFrame):
+def save_data(df):
     df.to_csv(FILE_PATH, index=False)
+    save_data_to_google(df)
+        
+def save_data_to_google(df):
+    
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
 
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"], scope
+    )
 
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(SHEET_ID).sheet1
+
+    sheet.clear()
+    sheet.append_row(df.columns.tolist())
+
+    for row in df.values.tolist():
+        sheet.append_row(row)
 # =========================
 # PDF GENERATOR LANDSCAPE
 # =========================
@@ -363,13 +385,15 @@ def render():
                     "Jumlah": jumlah,
                 }
 
-                if st.session_state.mode == "TAMBAH":
-                    df = pd.concat([df, pd.DataFrame([data_baru])], ignore_index=True)
-                else:
-                    df.loc[st.session_state.selected_index] = data_baru
+                df_full = st.session_state.data_perbelanjaan.copy()
 
-                st.session_state.data_perbelanjaan = df
-                save_data(df)
+                if st.session_state.mode == "TAMBAH":
+                    df_full = pd.concat([df_full, pd.DataFrame([data_baru])], ignore_index=True)
+                else:
+                    df_full.loc[st.session_state.selected_index] = data_baru
+
+                st.session_state.data_perbelanjaan = df_full
+                save_data(df_full)
                 st.success("Rekod berjaya disimpan.")
 
                 # ===== AUTO NEXT =====
