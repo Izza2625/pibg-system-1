@@ -90,11 +90,12 @@ def save_data_to_google(df):
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SHEET_ID).sheet1
 
-    sheet.clear()
-    sheet.append_row(df.columns.tolist())
+    df = df.fillna("")
+    df = df.astype(str)
 
-    for row in df.values.tolist():
-        sheet.append_row(row)
+    # Clear & upload sekali gus (lebih stabil dari append_row loop)
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
 # =========================
 # PDF GENERATOR LANDSCAPE
 # =========================
