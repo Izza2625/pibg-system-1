@@ -77,25 +77,28 @@ def save_data(df):
     save_data_to_google(df)
         
 def save_data_to_google(df):
-    
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
 
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        st.secrets["gcp_service_account"], scope
-    )
+    try:
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
 
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key(SHEET_ID).sheet1
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            st.secrets["gcp_service_account"], scope
+        )
 
-    df = df.fillna("")
-    df = df.astype(str)
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(SHEET_ID).sheet1
 
-    # Clear & upload sekali gus (lebih stabil dari append_row loop)
-    sheet.clear()
-    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+        # Hantar SEMUA data sekali (ELAK quota error)
+        data = [df.columns.tolist()] + df.astype(str).values.tolist()
+
+        sheet.clear()
+        sheet.update("A1", data)
+
+    except Exception as e:
+        st.error(f"Google save error: {e}")
 # =========================
 # PDF GENERATOR LANDSCAPE
 # =========================
@@ -279,9 +282,16 @@ def render():
 
         with c1:
             if st.button("YA, PADAM"):
-                df = df.drop(st.session_state.selected_index).reset_index(drop=True)
-                st.session_state.data_perbelanjaan = df
-                save_data(df)
+
+                real_index = st.session_state.selected_index
+                df_full = st.session_state.data_perbelanjaan.copy()
+
+                if real_index is not None and real_index < len(df_full):
+                    df_full = df_full.drop(real_index).reset_index(drop=True)
+
+                st.session_state.data_perbelanjaan = df_full
+                save_data(df_full)
+
                 st.session_state.confirm_delete = False
                 st.session_state.selected_index = None
                 st.success("Rekod dipadam.")
@@ -291,7 +301,6 @@ def render():
             if st.button("BATAL"):
                 st.session_state.confirm_delete = False
                 st.rerun()
-
     # =========================
     # JADUAL PAPARAN
     # =========================
@@ -318,8 +327,29 @@ def render():
         )
 
         pilih = edited_df[edited_df["Pilih"] == True]
-        st.session_state.selected_index = pilih.index[0] if len(pilih) == 1 else None
 
+        if len(pilih) == 1:
+            selected_row = pilih.iloc[0]
+
+            df_full_real = st.session_state.data_perbelanjaan.copy()
+            df_full_real["Tarikh"] = pd.to_datetime(
+                df_full_real["Tarikh"],
+                errors="coerce",
+                format="mixed",
+                dayfirst=True
+            ).dt.strftime("%d-%b-%Y")
+
+            real_match = df_full_real[
+                (df_full_real["Tarikh"] == selected_row["Tarikh"]) &
+                (df_full_real["Bayaran"].astype(str) == str(selected_row["Bayaran"]))
+            ]
+
+            if not real_match.empty:
+                st.session_state.selected_index = real_match.index[0]
+            else:
+                st.session_state.selected_index = None
+        else:
+            st.session_state.selected_index = None
     # =========================
     # JUMLAH AKHIR
     # =========================
@@ -376,14 +406,14 @@ def render():
                     or jumlah <= 0
                 ):
                     st.error("Semua maklumat WAJIB diisi.")
-                    return
+                    st.stop()
 
                 data_baru = {
                     "Tarikh": tarikh.strftime("%Y-%m-%d"),
                     "Kluster": kluster,
                     "Bayaran": bayaran,
                     "Kaedah Pembayaran": kaedah,
-                    "Jumlah": jumlah,
+                    "Jumlah": float(jumlah),
                 }
 
                 df_full = st.session_state.data_perbelanjaan.copy()
@@ -391,11 +421,17 @@ def render():
                 if st.session_state.mode == "TAMBAH":
                     df_full = pd.concat([df_full, pd.DataFrame([data_baru])], ignore_index=True)
                 else:
-                    df_full.loc[st.session_state.selected_index] = data_baru
+                    idx = st.session_state.selected_index
+                    if idx is not None and idx < len(df_full):
+                        df_full.loc[idx] = data_baru
 
                 st.session_state.data_perbelanjaan = df_full
                 save_data(df_full)
+
                 st.success("Rekod berjaya disimpan.")
+                st.session_state.show_form = False
+                st.session_state.selected_index = None
+                st.rerun()
 
                 # ===== AUTO NEXT =====
                 if st.session_state.auto_next:
