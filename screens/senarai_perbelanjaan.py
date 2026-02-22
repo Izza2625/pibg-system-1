@@ -74,7 +74,11 @@ def load_data():
 
 def save_data(df):
     df.to_csv(FILE_PATH, index=False)
-    save_data_to_google(df)
+
+    try:
+        save_data_to_google(df)
+    except:
+        st.warning("Google gagal, tapi CSV selamat.")
         
 def save_data_to_google(df):
 
@@ -91,14 +95,15 @@ def save_data_to_google(df):
         client = gspread.authorize(creds)
         sheet = client.open_by_key(SHEET_ID).sheet1
 
-        # Hantar SEMUA data sekali (ELAK quota error)
-        data = [df.columns.tolist()] + df.astype(str).values.tolist()
-
         sheet.clear()
-        sheet.update("A1", data)
+
+        data = [df.columns.tolist()] + df.astype(str).values.tolist()
+        sheet.update("A1", data)   # <<< HANTAR SEKALI (NO QUOTA)
+
+        st.success("Google Sheet updated")
 
     except Exception as e:
-        st.error(f"Google save error: {e}")
+        st.error(f"Google save gagal: {e}")
 # =========================
 # PDF GENERATOR LANDSCAPE
 # =========================
@@ -272,7 +277,7 @@ def render():
             file_name=f"senarai_perbelanjaan_{tahun}.pdf",
             mime="application/pdf",
         )
-
+        
     # =========================
     # CONFIRM DELETE
     # =========================
@@ -426,11 +431,17 @@ def render():
                         df_full.loc[idx] = data_baru
 
                 st.session_state.data_perbelanjaan = df_full
+
                 save_data(df_full)
 
+                # REFRESH DATA DARI GOOGLE SAHAJA
+                st.session_state.data_perbelanjaan = df_full
+
                 st.success("Rekod berjaya disimpan.")
+
                 st.session_state.show_form = False
                 st.session_state.selected_index = None
+
                 st.rerun()
 
                 # ===== AUTO NEXT =====
