@@ -223,6 +223,9 @@ def render():
         st.session_state.confirm_delete = False
     if "auto_next" not in st.session_state:
         st.session_state.auto_next = False
+    # 🔥 FIX CEPAT PAMERAN
+    if st.session_state.auto_next:
+        st.session_state.show_form = True
  
     df = st.session_state.data_perbelanjaan.copy()
 
@@ -363,46 +366,56 @@ def render():
         st.markdown(f"### Jumlah Akhir: RM {jumlah:,.2f}")
 
     # =========================
-    # BORANG TAMBAH / EDIT
+    # BORANG TAMBAH / EDIT (GUNA FORM - STABIL)
     # =========================
     if st.session_state.show_form:
 
-        if st.session_state.mode == "EDIT":
-            data = df.loc[st.session_state.selected_index]
+        df_full = st.session_state.data_perbelanjaan.copy()
+        idx = st.session_state.selected_index
 
-            tarikh = st.date_input("TARIKH", pd.to_datetime(data["Tarikh"]))
+        # default value
+        tarikh_d = pd.Timestamp.today().date()
+        kluster_d = "SILA PILIH"
+        bayaran_d = ""
+        kaedah_d = "SILA PILIH"
+        jumlah_d = 0.0
+
+        # kalau edit → ambil data asal
+        if st.session_state.mode == "EDIT" and idx is not None and idx < len(df_full):
+            r = df_full.loc[idx]
+            tarikh_d = pd.to_datetime(r["Tarikh"]).date()
+            kluster_d = r["Kluster"]
+            bayaran_d = r["Bayaran"]
+            kaedah_d = r["Kaedah Pembayaran"]
+            jumlah_d = float(r["Jumlah"])
+
+        with st.form("form_perbelanjaan"):
+
+            tarikh = st.date_input("TARIKH", value=tarikh_d)
             kluster = st.selectbox(
-    		"KLUSTER",
-    		KLUSTER_OPTIONS,
-    		index=KLUSTER_OPTIONS.index(data["Kluster"])
-    		if data["Kluster"] in KLUSTER_OPTIONS
-    		else 0
-	    )
-
-            bayaran = st.text_input("BAYARAN", data["Bayaran"])
+                "KLUSTER",
+                KLUSTER_OPTIONS,
+                index=KLUSTER_OPTIONS.index(kluster_d) if kluster_d in KLUSTER_OPTIONS else 0
+            )
+            bayaran = st.text_input("BAYARAN", value=bayaran_d)
             kaedah = st.selectbox(
                 "KAEDAH PEMBAYARAN",
                 ["SILA PILIH", "Tunai", "Bank"],
-                index=["SILA PILIH", "Tunai", "Bank"].index(data["Kaedah Pembayaran"]),
+                index=["SILA PILIH", "Tunai", "Bank"].index(kaedah_d)
             )
-            jumlah = st.number_input("JUMLAH", value=float(data["Jumlah"]))
+            jumlah = st.number_input("JUMLAH", value=jumlah_d)
 
-        else:
-            tarikh = st.date_input("TARIKH")
-            kluster = st.selectbox("KLUSTER", KLUSTER_OPTIONS)
-            bayaran = st.text_input("BAYARAN")
-            kaedah = st.selectbox("KAEDAH PEMBAYARAN", ["SILA PILIH", "Tunai", "Bank"])
-            jumlah = st.number_input("JUMLAH")
-            
-        st.checkbox(
-            "TERUSKAN DENGAN TRANSAKSI SETERUSNYA",
-            key="auto_next"
-        )
+            st.checkbox(
+                "TERUSKAN DENGAN TRANSAKSI SETERUSNYA",
+                key="auto_next"
+            )
 
-        c1, c2 = st.columns(2)
+            col1, col2 = st.columns(2)
+            submit = col1.form_submit_button("SIMPAN")
+            cancel = col2.form_submit_button("BATAL")
 
-        with c1:
-            if st.button("SIMPAN"):
+            # ===== SIMPAN =====
+            if submit:
 
                 if (
                     kaedah == "SILA PILIH"
@@ -413,7 +426,7 @@ def render():
                     st.error("Semua maklumat WAJIB diisi.")
                     st.stop()
 
-                data_baru = {
+                row = {
                     "Tarikh": tarikh.strftime("%Y-%m-%d"),
                     "Kluster": kluster,
                     "Bayaran": bayaran,
@@ -421,48 +434,29 @@ def render():
                     "Jumlah": float(jumlah),
                 }
 
-                df_full = st.session_state.data_perbelanjaan.copy()
-
-                if st.session_state.mode == "TAMBAH":
-                    df_full = pd.concat([df_full, pd.DataFrame([data_baru])], ignore_index=True)
+                if st.session_state.mode == "EDIT" and idx is not None:
+                    df_full.loc[idx] = row
                 else:
-                    idx = st.session_state.selected_index
-                    if idx is not None and idx < len(df_full):
-                        df_full.loc[idx] = data_baru
+                    df_full = pd.concat([df_full, pd.DataFrame([row])], ignore_index=True)
 
                 st.session_state.data_perbelanjaan = df_full
-
                 save_data(df_full)
-
-                # REFRESH DATA DARI GOOGLE SAHAJA
-                st.session_state.data_perbelanjaan = df_full
 
                 st.success("Rekod berjaya disimpan.")
 
-                st.session_state.show_form = False
-                st.session_state.selected_index = None
-
-                st.rerun()
-
-                # ===== AUTO NEXT =====
+                # ===== AUTO NEXT (IKUT CARA MODUL LAIN) =====
                 if st.session_state.auto_next:
-                    st.session_state.show_form = True
+                    st.session_state.mode = "TAMBAH"
                     st.session_state.selected_index = None
-
-                    # reset widget (supaya kosong)
-                    st.session_state.pop("Tarikh", None)
-                    st.session_state.pop("Kluster", None)
-                    st.session_state.pop("Bayaran", None)
-                    st.session_state.pop("Kaedah Pembayaran", None)
-                    st.session_state.pop("Jumlah", None)
-
+                    st.session_state.show_form = True
                 else:
                     st.session_state.show_form = False
                     st.session_state.selected_index = None
 
                 st.rerun()
 
-        with c2:
-            if st.button("BATAL"):
+            # ===== BATAL =====
+            if cancel:
                 st.session_state.show_form = False
+                st.session_state.selected_index = None
                 st.rerun()
