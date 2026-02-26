@@ -979,6 +979,9 @@ def render():
         b3 = c3.number_input("Bayaran 3 (RM)", value=float(b3_d))
         t3 = c3.date_input("Tarikh Bayaran 3", value=None, key="t3")
 
+        if kaedah_d not in KAEDAH_OPTIONS:
+            kaedah_d = "SILA PILIH"
+
         kaedah = st.selectbox(
             "Kaedah Pembayaran",
             KAEDAH_OPTIONS,
