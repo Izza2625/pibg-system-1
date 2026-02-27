@@ -29,37 +29,46 @@ EMAIL_PASSWORD = "jedvgkfcunlveezu"   # ❗️BUANG SPACE
 # ======================================================
 @st.cache_data(ttl=30)
 def load_permohonan_data():
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
+    try:
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
 
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        st.secrets["gcp_service_account"], scope
-    )
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            st.secrets["gcp_service_account"], scope
+        )
 
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key(SHEET_ID).sheet1
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(SHEET_ID).sheet1
 
-    records = sheet.get_all_records()
-    df = pd.DataFrame(records)
-    df["_row"] = range(2, len(df) + 2)
+        records = sheet.get_all_records()
+        df = pd.DataFrame(records)
+        df["_row"] = range(2, len(df) + 2)
 
-    return df
+        return df
+
+    except Exception as e:
+        st.error("Google Sheet gagal disambungkan.")
+        st.code(str(e))
+        return pd.DataFrame()
 
 def get_sheet():
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
+    try:
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
 
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        st.secrets["gcp_service_account"], scope
-    )
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            st.secrets["gcp_service_account"], scope
+        )
 
-    client = gspread.authorize(creds)
-    return client.open_by_key(SHEET_ID).sheet1
+        client = gspread.authorize(creds)
+        return client.open_by_key(SHEET_ID).sheet1
 
+    except Exception:
+        return None
 
 # ======================================================
 # UPDATE STATUS DALAM GOOGLE SHEET
