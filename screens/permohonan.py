@@ -276,6 +276,10 @@ def render():
         # ======================
         df = load_permohonan_data()
         sheet = get_sheet()
+        
+        if df.empty:
+            st.warning("Tiada data untuk dipaparkan.")
+            return
 
         # ======================
         # BERSIHKAN FORMAT RM
