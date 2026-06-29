@@ -50,7 +50,7 @@ from screens import (
 # PAGE CONFIG
 # ===============================
 st.set_page_config(
-    page_title="MyPIBGkvks",
+    page_title="FinTrack KVKS",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -182,7 +182,7 @@ if not st.session_state.logged_in:
     with col2:
         st.markdown(f"""
         <div class="login-box">
-        <h1 style="text-align:center;">MyPIBGkvks</h1>
+        <h1 style="text-align:center;">FinTrack KVKS</h1>
         <h3 style="
             text-align:center;
             white-space: nowrap;
@@ -310,7 +310,7 @@ h1, h2, h3 {
 # SIDEBAR MENU
 # ===============================
 with st.sidebar:
-    st.markdown("## MyPIBGkvks")
+    st.markdown("## FinTrack KVKS")
 
     if st.button("Halaman Utama"):
         st.session_state.current_page = "Halaman Utama"
