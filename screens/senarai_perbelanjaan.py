@@ -236,7 +236,6 @@ def render():
         df["Tarikh"] = pd.to_datetime(
             df["Tarikh"],
             errors="coerce",
-            infer_datetime_format=True
         )
 
         df = df[
